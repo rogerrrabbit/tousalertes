@@ -13,7 +13,7 @@ const events = [
 const basemaps = {
   topo: {
     version: 8,
-    sources: { topo: { type: 'raster', tiles: ['https://{a-c}.tile.opentopomap.org/{z}/{x}/{y}.png'], tileSize: 256, attribution: '© OpenTopoMap contributors' } },
+    sources: { topo: { type: 'raster', tiles: ['https://a.tile.opentopomap.org/{z}/{x}/{y}.png'], tileSize: 256, attribution: '© OpenTopoMap contributors' } },
     layers: [{ id: 'topo', type: 'raster', source: 'topo' }],
   },
   satellite: {
@@ -77,14 +77,16 @@ function focusEvent(event) {
   new maplibregl.Popup({ closeButton: false, offset: 16 }).setLngLat(event.coordinates).setHTML(`<strong>${event.title}</strong><br>${event.place}<br><small>${event.status} · ${event.time}</small>`).addTo(map)
 }
 
-map.on('load', () => {
+function addEventLayers() {
   map.addSource('events', { type: 'geojson', data: { type: 'FeatureCollection', features: events.map((event) => ({ type: 'Feature', properties: event, geometry: { type: 'Point', coordinates: event.coordinates } })) } })
-  map.addLayer({ id: 'event-glow', type: 'circle', source: 'events', paint: { 'circle-radius': ['interpolate', ['linear'], ['get', 'intensity'], 40, 15, 100, 34], 'circle-color': ['get', 'type'], 'circle-opacity': 0.15 } })
+  map.addLayer({ id: 'event-glow', type: 'circle', source: 'events', paint: { 'circle-radius': ['interpolate', ['linear'], ['get', 'intensity'], 40, 15, 100, 34], 'circle-color': ['match', ['get', 'type'], 'fire', '#ff5b35', 'flood', '#36a8d8', 'storm', '#ae72e8', '#e9b949'], 'circle-opacity': 0.15 } })
   map.addLayer({ id: 'event-points', type: 'circle', source: 'events', paint: { 'circle-radius': 7, 'circle-color': ['match', ['get', 'type'], 'fire', '#ff5b35', 'flood', '#36a8d8', 'storm', '#ae72e8', '#e9b949'], 'circle-stroke-width': 2, 'circle-stroke-color': '#fff' } })
-  map.on('click', 'event-points', (event) => focusEvent(event.features[0].properties))
-  map.on('mouseenter', 'event-points', () => { map.getCanvas().style.cursor = 'pointer' })
-  map.on('mouseleave', 'event-points', () => { map.getCanvas().style.cursor = '' })
-})
+}
+
+map.on('style.load', addEventLayers)
+map.on('click', 'event-points', (event) => focusEvent(events.find((item) => item.id === event.features[0].properties.id)))
+map.on('mouseenter', 'event-points', () => { map.getCanvas().style.cursor = 'pointer' })
+map.on('mouseleave', 'event-points', () => { map.getCanvas().style.cursor = '' })
 
 document.querySelectorAll('.filter').forEach((button) => button.addEventListener('click', () => {
   document.querySelector('.filter.active').classList.remove('active')
