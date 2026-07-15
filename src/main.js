@@ -1,4 +1,5 @@
 import './style.css'
+import 'maplibre-gl/dist/maplibre-gl.css'
 
 const events = [
   { id: 'greece', title: 'Feux de forêt', place: 'Grèce centrale', type: 'fire', status: 'Actif', time: 'il y a 12 min', coordinates: [22.42, 38.84], intensity: 92 },
@@ -81,7 +82,6 @@ function addEventLayers() {
 async function initializeMap() {
   try {
     const module = await import('maplibre-gl')
-    import('maplibre-gl/dist/maplibre-gl.css')
     maplibregl = module.default
     map = new maplibregl.Map({ container: 'map', style: basemaps.topo, center: [9, 31], zoom: 2.1, attributionControl: false })
     map.addControl(new maplibregl.AttributionControl({ compact: true }))
@@ -93,7 +93,10 @@ async function initializeMap() {
   } catch (error) {
     console.error('Map initialization failed:', error)
     document.querySelector('#map-fallback').hidden = false
-    document.querySelectorAll('[data-requires-map]').forEach((control) => { control.disabled = true; control.setAttribute('aria-disabled', 'true') })
+    document.querySelectorAll('[data-requires-map]').forEach((control) => {
+      control.disabled = true
+      control.setAttribute('aria-disabled', 'true')
+    })
   }
 }
 
