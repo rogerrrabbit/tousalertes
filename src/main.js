@@ -1,5 +1,4 @@
 import './style.css'
-import 'maplibre-gl/dist/maplibre-gl.css'
 
 const events = [
   { id: 'greece', title: 'Feux de forêt', place: 'Grèce centrale', type: 'fire', status: 'Actif', time: 'il y a 12 min', coordinates: [22.42, 38.84], intensity: 92 },
@@ -82,6 +81,7 @@ function addEventLayers() {
 async function initializeMap() {
   try {
     const module = await import('maplibre-gl')
+    await import('maplibre-gl/dist/maplibre-gl.css')
     maplibregl = module.default
     map = new maplibregl.Map({ container: 'map', style: basemaps.topo, center: [9, 31], zoom: 2.1, attributionControl: false })
     map.addControl(new maplibregl.AttributionControl({ compact: true }))
@@ -106,6 +106,7 @@ document.querySelectorAll('.filter').forEach((button) => button.addEventListener
   renderEvents(button.dataset.filter)
 }))
 document.querySelectorAll('[data-base]').forEach((button) => button.addEventListener('click', () => {
+  if (button.disabled) return
   document.querySelector('[data-base].active').classList.remove('active')
   button.classList.add('active')
   map?.setStyle(basemaps[button.dataset.base])
