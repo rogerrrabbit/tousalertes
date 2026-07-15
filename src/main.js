@@ -90,8 +90,10 @@ async function initializeMap() {
     map.on('click', 'event-points', (event) => focusEvent(events.find((item) => item.id === event.features[0].properties.id)))
     map.on('mouseenter', 'event-points', () => { map.getCanvas().style.cursor = 'pointer' })
     map.on('mouseleave', 'event-points', () => { map.getCanvas().style.cursor = '' })
-  } catch {
+  } catch (error) {
+    console.error('Map initialization failed:', error)
     document.querySelector('#map-fallback').hidden = false
+    document.querySelectorAll('[data-base], #focus-fires, #locate').forEach((control) => { control.disabled = true })
   }
 }
 
