@@ -1,5 +1,3 @@
-import maplibregl from 'maplibre-gl'
-import 'maplibre-gl/dist/maplibre-gl.css'
 import './style.css'
 
 const events = [
@@ -45,23 +43,19 @@ document.querySelector('#app').innerHTML = `
     </aside>
     <section class="map-area">
       <div id="map" aria-label="Carte des évènements climatiques mondiaux"></div>
+      <p id="map-fallback" role="status" aria-live="polite" hidden>La carte est indisponible sur cet appareil. Les alertes restent accessibles ci-dessous.</p>
       <div class="map-controls">
-        <div class="base-selector"><button data-base="topo" class="active">Carte topo</button><button data-base="satellite">Satellite</button></div>
-        <button id="locate" class="locate" aria-label="Me localiser">◎</button>
+        <div class="base-selector"><button data-base="topo" data-requires-map class="active">Carte topo</button><button data-base="satellite" data-requires-map>Satellite</button></div>
+        <button id="locate" data-requires-map class="locate" aria-label="Me localiser">◎</button>
       </div>
       <div class="map-legend"><span><i class="legend-fire"></i>Incendie</span><span><i class="legend-flood"></i>Inondation</span><span><i class="legend-storm"></i>Tempête</span></div>
-      <div class="focus-note"><span>◎</span><div><b>Focus incendies</b><br>Détections FIRMS / VIIRS<br>des dernières 24 heures</div><button id="focus-fires">Voir sur la carte →</button></div>
+      <div class="focus-note"><span>◎</span><div><b>Focus incendies</b><br>Détections FIRMS / VIIRS<br>des dernières 24 heures</div><button id="focus-fires" data-requires-map>Voir sur la carte →</button></div>
     </section>
   </main>
 `
 
-const map = new maplibregl.Map({ container: 'map', style: basemaps.topo, center: [9, 31], zoom: 2.1, attributionControl: false })
-map.addControl(new maplibregl.AttributionControl({ compact: true }))
-map.addControl(new maplibregl.NavigationControl(), 'bottom-right')
-
-function color(type) {
-  return { fire: '#ff5b35', flood: '#36a8d8', storm: '#ae72e8', drought: '#e9b949' }[type]
-}
+let map
+let maplibregl
 
 function renderEvents(filter = 'all') {
   const visible = filter === 'all' ? events : events.filter((event) => event.type === filter)
@@ -73,6 +67,7 @@ function renderEvents(filter = 'all') {
 }
 
 function focusEvent(event) {
+  if (!map || !maplibregl) return
   map.flyTo({ center: event.coordinates, zoom: 5, essential: true })
   new maplibregl.Popup({ closeButton: false, offset: 16 }).setLngLat(event.coordinates).setHTML(`<strong>${event.title}</strong><br>${event.place}<br><small>${event.status} · ${event.time}</small>`).addTo(map)
 }
@@ -83,10 +78,27 @@ function addEventLayers() {
   map.addLayer({ id: 'event-points', type: 'circle', source: 'events', paint: { 'circle-radius': 7, 'circle-color': ['match', ['get', 'type'], 'fire', '#ff5b35', 'flood', '#36a8d8', 'storm', '#ae72e8', '#e9b949'], 'circle-stroke-width': 2, 'circle-stroke-color': '#fff' } })
 }
 
-map.on('style.load', addEventLayers)
-map.on('click', 'event-points', (event) => focusEvent(events.find((item) => item.id === event.features[0].properties.id)))
-map.on('mouseenter', 'event-points', () => { map.getCanvas().style.cursor = 'pointer' })
-map.on('mouseleave', 'event-points', () => { map.getCanvas().style.cursor = '' })
+async function initializeMap() {
+  try {
+    const module = await import('maplibre-gl')
+    await import('maplibre-gl/dist/maplibre-gl.css')
+    maplibregl = module.default
+    map = new maplibregl.Map({ container: 'map', style: basemaps.topo, center: [9, 31], zoom: 2.1, attributionControl: false })
+    map.addControl(new maplibregl.AttributionControl({ compact: true }))
+    map.addControl(new maplibregl.NavigationControl(), 'bottom-right')
+    map.on('style.load', addEventLayers)
+    map.on('click', 'event-points', (event) => focusEvent(events.find((item) => item.id === event.features[0].properties.id)))
+    map.on('mouseenter', 'event-points', () => { map.getCanvas().style.cursor = 'pointer' })
+    map.on('mouseleave', 'event-points', () => { map.getCanvas().style.cursor = '' })
+  } catch (error) {
+    console.error('Map initialization failed:', error)
+    document.querySelector('#map-fallback').hidden = false
+    document.querySelectorAll('[data-requires-map]').forEach((control) => {
+      control.disabled = true
+      control.setAttribute('aria-disabled', 'true')
+    })
+  }
+}
 
 document.querySelectorAll('.filter').forEach((button) => button.addEventListener('click', () => {
   document.querySelector('.filter.active').classList.remove('active')
@@ -94,11 +106,13 @@ document.querySelectorAll('.filter').forEach((button) => button.addEventListener
   renderEvents(button.dataset.filter)
 }))
 document.querySelectorAll('[data-base]').forEach((button) => button.addEventListener('click', () => {
+  if (button.disabled) return
   document.querySelector('[data-base].active').classList.remove('active')
   button.classList.add('active')
-  map.setStyle(basemaps[button.dataset.base])
+  map?.setStyle(basemaps[button.dataset.base])
 }))
-document.querySelector('#focus-fires').addEventListener('click', () => { renderEvents('fire'); document.querySelector('[data-filter="fire"]').click(); map.flyTo({ center: [10, 42], zoom: 3.5 }) })
-document.querySelector('#locate').addEventListener('click', () => map.flyTo({ center: [2.35, 48.86], zoom: 6 }))
+document.querySelector('#focus-fires').addEventListener('click', () => { renderEvents('fire'); document.querySelector('[data-filter="fire"]').click(); map?.flyTo({ center: [10, 42], zoom: 3.5 }) })
+document.querySelector('#locate').addEventListener('click', () => map?.flyTo({ center: [2.35, 48.86], zoom: 6 }))
 document.querySelector('#refresh').addEventListener('click', (event) => { event.currentTarget.classList.add('spinning'); setTimeout(() => event.currentTarget.classList.remove('spinning'), 600) })
 renderEvents()
+initializeMap()
