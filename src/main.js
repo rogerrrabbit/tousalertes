@@ -43,13 +43,13 @@ document.querySelector('#app').innerHTML = `
     </aside>
     <section class="map-area">
       <div id="map" aria-label="Carte des évènements climatiques mondiaux"></div>
-      <p id="map-fallback" hidden>La carte est indisponible sur cet appareil. Les alertes restent accessibles ci-dessous.</p>
+      <p id="map-fallback" role="status" aria-live="polite" hidden>La carte est indisponible sur cet appareil. Les alertes restent accessibles ci-dessous.</p>
       <div class="map-controls">
-        <div class="base-selector"><button data-base="topo" class="active">Carte topo</button><button data-base="satellite">Satellite</button></div>
-        <button id="locate" class="locate" aria-label="Me localiser">◎</button>
+        <div class="base-selector"><button data-base="topo" data-requires-map class="active">Carte topo</button><button data-base="satellite" data-requires-map>Satellite</button></div>
+        <button id="locate" data-requires-map class="locate" aria-label="Me localiser">◎</button>
       </div>
       <div class="map-legend"><span><i class="legend-fire"></i>Incendie</span><span><i class="legend-flood"></i>Inondation</span><span><i class="legend-storm"></i>Tempête</span></div>
-      <div class="focus-note"><span>◎</span><div><b>Focus incendies</b><br>Détections FIRMS / VIIRS<br>des dernières 24 heures</div><button id="focus-fires">Voir sur la carte →</button></div>
+      <div class="focus-note"><span>◎</span><div><b>Focus incendies</b><br>Détections FIRMS / VIIRS<br>des dernières 24 heures</div><button id="focus-fires" data-requires-map>Voir sur la carte →</button></div>
     </section>
   </main>
 `
@@ -93,7 +93,7 @@ async function initializeMap() {
   } catch (error) {
     console.error('Map initialization failed:', error)
     document.querySelector('#map-fallback').hidden = false
-    document.querySelectorAll('[data-base], #focus-fires, #locate').forEach((control) => { control.disabled = true })
+    document.querySelectorAll('[data-requires-map]').forEach((control) => { control.disabled = true })
   }
 }
 
